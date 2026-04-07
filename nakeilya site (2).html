@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nakeilya • Art</title>
+  <style>
+    :root { --pink: #ff69b4; }
+    body { margin:0; font-family:'Segoe UI',system-ui,sans-serif; background:#0a0a0a; color:#eee; }
+    header {
+      text-align:center; padding:90px 20px 50px;
+      background:linear-gradient(rgba(0,0,0,0.8),rgba(0,0,0,0.9)), 
+                  url('https://cdn.bsky.app/img/avatar/plain/did:plc:qfqobvqz2yagvhrb5widjp2u/bafkreidffslu7vjpkpritlhbeij6qmwgwc4hmlzhzppi7atp3o6frfrwum') center/cover;
+      background-size:cover;
+    }
+    .avatar { width:165px; height:165px; border-radius:50%; border:7px solid var(--pink); box-shadow:0 0 30px rgba(255,105,180,0.5); }
+    h1 { font-size:3.4rem; margin:12px 0 6px; }
+    .username { font-size:1.35rem; opacity:0.9; }
+
+    nav { text-align:center; margin:40px 0 60px; }
+    nav a, nav button {
+      color:#ddd; text-decoration:none; margin:0 20px; font-size:1.2rem; background:none; border:none; cursor:pointer;
+    }
+    nav a.active, nav button.active { color:var(--pink); border-bottom:4px solid var(--pink); }
+
+    .section { max-width:1350px; margin:0 auto; padding:0 25px 100px; display:none; }
+    .section.active { display:block; }
+
+    .about { text-align:center; background:#1a1a1a; padding:65px 50px; border-radius:20px; max-width:780px; margin:0 auto; font-size:1.32rem; line-height:1.75; }
+
+    .gallery { display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:28px; }
+    .post { background:#1a1a1a; border-radius:18px; overflow:hidden; position:relative; cursor:pointer; transition:transform 0.4s; }
+    .post:hover { transform:scale(1.05); }
+    .post img { width:100%; height:auto; display:block; }
+    .heart { position:absolute; top:18px; right:18px; font-size:32px; cursor:pointer; opacity:0; transition:all 0.3s; text-shadow:0 2px 12px rgba(0,0,0,0.7); }
+    .post:hover .heart { opacity:1; }
+    .heart.favorited { color:#ff2d55; }
+
+    /* Lightbox */
+    .lightbox { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.95); display:none; align-items:center; justify-content:center; z-index:1000; }
+    .lightbox-content { display:flex; max-width:1100px; width:95%; background:#1a1a1a; border-radius:20px; overflow:hidden; max-height:90vh; }
+    .lightbox-img { flex:1; background:#000; display:flex; align-items:center; justify-content:center; padding:20px; }
+    .lightbox-img img { max-width:100%; max-height:85vh; object-fit:contain; }
+    .lightbox-info { width:380px; padding:40px 30px; overflow-y:auto; display:flex; flex-direction:column; }
+    .lightbox-info p { line-height:1.7; font-size:1.1rem; margin-bottom:30px; }
+    .lightbox-info img.fun-image { margin-top:auto; align-self:center; max-width:240px; border-radius:12px; }
+
+    .modal { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.9); display:none; align-items:center; justify-content:center; z-index:2000; }
+    .modal-content { background:#1a1a1a; padding:40px; border-radius:16px; width:100%; max-width:400px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <img src="https://cdn.bsky.app/img/avatar/plain/did:plc:qfqobvqz2yagvhrb5widjp2u/bafkreidffslu7vjpkpritlhbeij6qmwgwc4hmlzhzppi7atp3o6frfrwum" alt="Nakeilya" class="avatar">
+    <h1>Nakeilya</h1>
+    <p class="username">@nakeilyaartz.bsky.social</p>
+  </header>
+
+  <nav id="nav">
+    <a href="#" data-tab="gallery" class="active">Gallery</a>
+    <a href="#" data-tab="about">About</a>
+    <a href="#" data-tab="favorites">Favorites ❤️</a>
+    <span id="auth-buttons">
+      <button onclick="showLoginModal()">Login</button>
+      <button onclick="showSignupModal()">Sign Up</button>
+    </span>
+    <span id="user-info" style="display:none;">
+      Logged in as <strong id="current-username"></strong> 
+      <button onclick="logout()">Log Out</button>
+    </span>
+  </nav>
+
+  <!-- Gallery (Default) -->
+  <div id="gallery" class="section active">
+    <h2 style="text-align:center; margin-bottom:45px;">Gallery</h2>
+    <div id="media-gallery" class="gallery"></div>
+    <div id="loading" style="text-align:center; padding:40px; color:#888; display:none;">Loading more art...</div>
+  </div>
+
+  <!-- About -->
+  <div id="about" class="section">
+    <div class="about">
+      <h2>Hii there~</h2>
+      <p>HII my name is nakeilyar. I’m a bit akward at times so sorry I ammm.. you can talk to me anytime though.!!</p>
+    </div>
+  </div>
+
+  <!-- Favorites -->
+  <div id="favorites" class="section">
+    <h2 style="text-align:center; margin-bottom:45px;">Favorites ❤️</h2>
+    <div id="favorites-gallery" class="gallery"></div>
+    <p id="no-favorites" style="text-align:center; color:#666; font-size:1.2rem; display:none;">No favorites yet~ Add some hearts!</p>
+  </div>
+
+  <!-- Lightbox -->
+  <div id="lightbox" class="lightbox">
+    <div class="lightbox-content">
+      <div class="lightbox-img" id="lightbox-image"></div>
+      <div class="lightbox-info">
+        <p id="lightbox-caption"></p>
+        <img src="https://iili.io/BuQnxjt.png" alt="" class="fun-image">
+      </div>
+    </div>
+  </div>
+
+  <!-- Login Modal -->
+  <div id="login-modal" class="modal">
+    <div class="modal-content">
+      <h2>Login</h2>
+      <input id="login-user" placeholder="Username" style="width:100%; padding:10px; margin:10px 0;"><br>
+      <input id="login-pass" type="password" placeholder="Password" style="width:100%; padding:10px; margin:10px 0;"><br>
+      <button onclick="login()" style="width:100%; padding:12px; background:var(--pink); color:white; border:none; border-radius:8px; margin-top:10px;">Login</button>
+      <button onclick="hideModals()" style="width:100%; margin-top:10px;">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Signup Modal -->
+  <div id="signup-modal" class="modal">
+    <div class="modal-content">
+      <h2>Sign Up</h2>
+      <input id="signup-user" placeholder="Choose username" style="width:100%; padding:10px; margin:10px 0;"><br>
+      <input id="signup-pass" type="password" placeholder="Choose password" style="width:100%; padding:10px; margin:10px 0;"><br>
+      <button onclick="signup()" style="width:100%; padding:12px; background:var(--pink); color:white; border:none; border-radius:8px; margin-top:10px;">Create Account</button>
+      <button onclick="hideModals()" style="width:100%; margin-top:10px;">Cancel</button>
+    </div>
+  </div>
+
+  <footer>© Nakeilya • All art belongs to the artist</footer>
+
+  <script>
+    const handle = "nakeilyaartz.bsky.social";
+    let cursor = null;
+    let isLoading = false;
+    let hasMore = true;
+    let currentUser = null;
+    let users = JSON.parse(localStorage.getItem('nakeilyaUsers') || '{}');
+    let favoritesData = JSON.parse(localStorage.getItem('nakeilyaFavoritesData') || '{}');
+
+    const mediaGallery = document.getElementById('media-gallery');
+    const favoritesGallery = document.getElementById('favorites-gallery');
+
+    // Tab Navigation
+    document.querySelectorAll('nav a[data-tab]').forEach(link => {
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+        link.classList.add('active');
+
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.getElementById(link.dataset.tab).classList.add('active');
+
+        if (link.dataset.tab === 'favorites') renderFavorites();
+      });
+    });
+
+    function saveData() {
+      localStorage.setItem('nakeilyaUsers', JSON.stringify(users));
+      localStorage.setItem('nakeilyaFavoritesData', JSON.stringify(favoritesData));
+    }
+
+    function getUserFavorites() {
+      if (!currentUser) return [];
+      return favoritesData[currentUser] || [];
+    }
+
+    function saveUserFavorites(favs) {
+      if (!currentUser) return;
+      favoritesData[currentUser] = favs;
+      saveData();
+    }
+
+    function renderFavorites() {
+      const favs = getUserFavorites();
+      favoritesGallery.innerHTML = '';
+      if (favs.length === 0) {
+        document.getElementById('no-favorites').style.display = 'block';
+        return;
+      }
+      document.getElementById('no-favorites').style.display = 'none';
+
+      favs.forEach(url => {
+        const div = document.createElement('div');
+        div.className = 'post';
+        div.innerHTML = `<img src="${url}" alt="Favorite"><span class="heart favorited">❤️</span>`;
+        favoritesGallery.appendChild(div);
+      });
+    }
+
+    function login() {
+      const user = document.getElementById('login-user').value.trim();
+      const pass = document.getElementById('login-pass').value;
+      if (users[user] && users[user].password === pass) {
+        currentUser = user;
+        updateNav();
+        hideModals();
+        renderFavorites();
+      } else {
+        alert("Wrong username or password");
+      }
+    }
+
+    function signup() {
+      const user = document.getElementById('signup-user').value.trim();
+      const pass = document.getElementById('signup-pass').value;
+      if (!user || !pass) return alert("Please fill both fields");
+      if (users[user]) return alert("Username already taken");
+      users[user] = { password: pass };
+      currentUser = user;
+      saveData();
+      updateNav();
+      hideModals();
+      renderFavorites();
+    }
+
+    function logout() {
+      currentUser = null;
+      updateNav();
+    }
+
+    function updateNav() {
+      const auth = document.getElementById('auth-buttons');
+      const info = document.getElementById('user-info');
+      const usernameEl = document.getElementById('current-username');
+
+      if (currentUser) {
+        auth.style.display = 'none';
+        info.style.display = 'inline';
+        usernameEl.textContent = currentUser;
+      } else {
+        auth.style.display = 'inline';
+        info.style.display = 'none';
+      }
+    }
+
+    function showLoginModal() { document.getElementById('login-modal').style.display = 'flex'; }
+    function showSignupModal() { document.getElementById('signup-modal').style.display = 'flex'; }
+    function hideModals() {
+      document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+    }
+
+    function openLightbox(imgUrl, caption) {
+      document.getElementById('lightbox-image').innerHTML = `<img src="${imgUrl}" alt="Art">`;
+      document.getElementById('lightbox-caption').textContent = caption || "";
+      document.getElementById('lightbox').style.display = 'flex';
+    }
+
+    document.getElementById('lightbox').addEventListener('click', e => {
+      if (e.target.id === 'lightbox') document.getElementById('lightbox').style.display = 'none';
+    });
+
+    async function loadMore() {
+      if (isLoading || !hasMore) return;
+      isLoading = true;
+      document.getElementById('loading').style.display = 'block';
+
+      try {
+        let url = `https://public.api.bsky.app/xrpc/app.bsky.feed.getAuthorFeed?actor=${handle}&limit=50`;
+        if (cursor) url += `&cursor=${cursor}`;
+
+        const res = await fetch(url);
+        const data = await res.json();
+
+        cursor = data.cursor || null;
+        if (!cursor) hasMore = false;
+
+        let posts = data.feed || [];
+        posts = posts.filter(item => !item.reason && item.post.embed && 
+          (item.post.embed.$type === "app.bsky.embed.images#view" || item.post.embed.$type === "app.bsky.embed.images"));
+
+        if (posts.length === 0 && !cursor) hasMore = false;
+
+        posts.forEach(item => {
+          const images = item.post.embed?.images || [];
+          const caption = item.post.record?.text || "";
+
+          images.forEach(img => {
+            const imgUrl = img.fullsize || img.thumb;
+            const div = document.createElement('div');
+            div.className = 'post';
+            div.innerHTML = `
+              <img src="${imgUrl}" alt="Art by Nakeilya">
+              <span class="heart ${getUserFavorites().includes(imgUrl) ? 'favorited' : ''}">♡</span>
+            `;
+
+            div.querySelector('img').addEventListener('click', () => openLightbox(imgUrl, caption));
+
+            const heart = div.querySelector('.heart');
+            heart.addEventListener('click', e => {
+              e.stopPropagation();
+              let favs = getUserFavorites();
+              if (favs.includes(imgUrl)) {
+                favs = favs.filter(u => u !== imgUrl);
+                heart.classList.remove('favorited');
+                heart.textContent = '♡';
+              } else {
+                favs.push(imgUrl);
+                heart.classList.add('favorited');
+                heart.textContent = '❤️';
+              }
+              saveUserFavorites(favs);
+            });
+
+            mediaGallery.appendChild(div);
+          });
+        });
+      } catch (err) { console.error(err); }
+
+      isLoading = false;
+      document.getElementById('loading').style.display = 'none';
+    }
+
+    window.addEventListener('scroll', () => {
+      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 1000) {
+        loadMore();
+      }
+    });
+
+    // Start on Gallery
+    loadMore();
+    updateNav();
+  </script>
+</body>
+</html>
